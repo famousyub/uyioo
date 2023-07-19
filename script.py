@@ -17,7 +17,9 @@ i =  input("enter film title")
 
 driver = webdriver.Chrome()
 
-url = f'https://www.imdb.com/title/{i}/reviews?ref_=tt_sa_3'
+url_u = f'https://www.imdb.com/title/{i}/reviews?ref_=tt_sa_3'
+
+url=f"https://www.imdb.com/title/{i}/reviews/?ref_=tt_ql_2"
 time.sleep(1)
 driver.get(url)
 time.sleep(1)
@@ -30,11 +32,17 @@ body.send_keys(Keys.PAGE_DOWN)
 time.sleep(1)
 body.send_keys(Keys.PAGE_DOWN)
 
+body.send_keys(Keys.PAGE_DOWN)
+time.sleep(1)
+body.send_keys(Keys.PAGE_DOWN)
+time.sleep(1)
+body.send_keys(Keys.PAGE_DOWN)
+
 
 sel = Selector(text = driver.page_source)
 review_counts = sel.css('.lister .header span::text').extract_first().replace(',','').split(' ')[0]
-more_review_pages = int(int(review_counts)/25)
-
+more_review_pages1 = int(int(review_counts)/25)
+more_review_pages=int(review_counts)
 
 for i in tqdm(range(more_review_pages)):
     try:
@@ -100,5 +108,5 @@ review_df = pd.DataFrame({
     'Review_Url':review_url
     })
 
-review_df.to_csv(f'{i}-data.csv', index=False)
+review_df.to_csv(f'filmdata.csv', index=False)
 
