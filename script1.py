@@ -9,66 +9,58 @@ from tqdm import tqdm
 import warnings
 warnings.filterwarnings("ignore")
 
+import imdb
 
+def get_movie_id(movie_name):
+    ia = imdb.IMDb()
+    movies = ia.search_movie(movie_name)
+    if movies:
+        movie = movies[0]
+        return movie.movieID
+    else:
+        return None
 
-i =  input("enter film title")
+film_name = input("Enter film name: ")
 
+i = get_movie_id(film_name)
+if i is None:
+    print("Movie not found.")
+    exit(1)
 
+i = f"tt{i}"
 
 driver = webdriver.Chrome()
 
-url_u = f'https://www.imdb.com/title/{i}/reviews?ref_=tt_sa_3'
-
-url=f"https://www.imdb.com/title/{i}/reviews/?ref_=tt_ql_2"
+url = f"https://www.imdb.com/title/{i}/reviews/?ref_=tt_ql_2"
 time.sleep(1)
 driver.get(url)
 time.sleep(1)
-print(driver.title)
-time.sleep(1)
+
 body = driver.find_element(By.CSS_SELECTOR, 'body')
-body.send_keys(Keys.PAGE_DOWN)
-time.sleep(1)
-body.send_keys(Keys.PAGE_DOWN)
-time.sleep(1)
-body.send_keys(Keys.PAGE_DOWN)
 
-body.send_keys(Keys.PAGE_DOWN)
-time.sleep(1)
-body.send_keys(Keys.PAGE_DOWN)
-time.sleep(1)
-body.send_keys(Keys.PAGE_DOWN)
+# Scroll to load all review pages
+while True:
+    old_height = driver.execute_script("return document.body.scrollHeight")
+    body.send_keys(Keys.PAGE_DOWN)
+    time.sleep(1)
+    new_height = driver.execute_script("return document.body.scrollHeight")
+    if new_height == old_height:
+        break
 
+sel = Selector(text=driver.page_source)
+review_counts = sel.css('.lister .header span::text').extract_first().replace(',', '').split(' ')[0]
+try: 
+    more_review_pages = int(review_counts)
+except Exception as e:
+    print(str(e))
+    exit(1)
 
-sel = Selector(text = driver.page_source)
-review_counts = sel.css('.lister .header span::text').extract_first().replace(',','').split(' ')[0]
-
-
-yu = type(review_counts)
-more_review_pages1 = int(int(review_counts)/25)
-more_review_pages=int(review_counts)
-
-
-
-
-print(review_counts)
-import  time 
-
-
-
-time.sleep(3)
-
-
-
-exit(1)
-
-for i in tqdm(range(more_review_pages)):
+for _ in tqdm(range(more_review_pages)):
     try:
         css_selector = 'load-more-trigger'
         driver.find_element(By.ID, css_selector).click()
     except:
         pass
-
-
 
 rating_list = []
 review_date_list = []
@@ -82,7 +74,7 @@ reviews = driver.find_elements(By.CSS_SELECTOR, 'div.review-container')
 
 for d in tqdm(reviews):
     try:
-        sel2 = Selector(text = d.get_attribute('innerHTML'))
+        sel2 = Selector(text=d.get_attribute('innerHTML'))
         try:
             rating = sel2.css('.rating-other-user-rating span::text').extract_first()
         except:
@@ -116,14 +108,16 @@ for d in tqdm(reviews):
     except Exception as e:
         error_url_list.append(url)
         error_msg_list.append(e)
+
 review_df = pd.DataFrame({
-    'Review_Date':review_date_list,
-    'Author':author_list,
-    'Rating':rating_list,
-    'Review_Title':review_title_list,
-    'Review':review_list,
-    'Review_Url':review_url
-    })
+    'Review_Date': review_date_list,
+    'Author': author_list,
+    'Rating': rating_list,
+    'Review_Title': review_title_list,
+    'Review': review_list,
+    'Review_Url': review_url_list  # Corrected variable name
+})
 
-review_df.to_csv(f'filmdata.csv', index=False)
+review_df.to_csv(f'{film_name}_reviews.csv', index=False)  # Save the CSV with a more descriptive name
 
+driver.quit()  # Close the browser after scraping is done
